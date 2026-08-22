@@ -354,11 +354,21 @@
 				for (var layerIndex = 0; layerIndex < 2; layerIndex++) {
 					var image = document.createElement('img');
 					image.className = 'image-crossfade-layer' + (layerIndex === 0 ? ' is-active' : '');
-					image.src = fallbackSrc || '';
+					if (fallbackSrc) image.src = fallbackSrc;
 					image.alt = altText || '';
 					stage.appendChild(image);
 				}
 				stage._imageCrossfadeActiveLayer = 0;
+				return stage;
+			};
+			var attachImageSpinnerFallback = function (stage, sizeClass) {
+				if (!stage) return stage;
+				stage.classList.add('has-spinner-fallback', 'is-loading');
+				if (stage.querySelector('.image-crossfade-spinner')) return stage;
+				var spinner = document.createElement('span');
+				spinner.className = 'cs2-spinner image-crossfade-spinner' + (sizeClass ? ' ' + sizeClass : '');
+				spinner.setAttribute('aria-hidden', 'true');
+				stage.insertBefore(spinner, stage.firstChild);
 				return stage;
 			};
 			var resetImageCrossfadeStage = function (stage, fallbackSrc) {
@@ -366,11 +376,18 @@
 				stage._imageCrossfadeActiveLayer = 0;
 				stage.dataset.remoteAppliedSrc = '';
 				stage.querySelectorAll('.image-crossfade-layer').forEach(function (image, index) {
-					image.src = fallbackSrc || '';
+					if (fallbackSrc) {
+						image.src = fallbackSrc;
+					} else {
+						image.removeAttribute('src');
+					}
 					image.dataset.remoteSrc = '';
 					image.dataset.remoteAppliedSrc = '';
 					image.classList.toggle('is-active', index === 0);
 				});
+				if (stage.classList.contains('has-spinner-fallback')) {
+					stage.classList.toggle('is-loading', !fallbackSrc);
+				}
 			};
 			var prepareImageCrossfade = function (stage, imageSrc) {
 				if (!stage || !imageSrc) return null;
@@ -393,6 +410,7 @@
 				transition.outgoing.classList.remove('is-active');
 				transition.incoming.classList.add('is-active');
 				transition.stage._imageCrossfadeActiveLayer = transition.incomingIndex;
+				transition.stage.classList.remove('is-loading');
 			};
 			var shouldUseImageCrossfade = function (image) {
 				if (!image) return false;
@@ -425,6 +443,7 @@
 	app.loadRemoteImage = loadRemoteImage;
 	app.observePickerImages = observePickerImages;
 	app.createImageCrossfadeStage = createImageCrossfadeStage;
+	app.attachImageSpinnerFallback = attachImageSpinnerFallback;
 	app.resetImageCrossfadeStage = resetImageCrossfadeStage;
 	app.prepareImageCrossfade = prepareImageCrossfade;
 	app.activateImageCrossfade = activateImageCrossfade;

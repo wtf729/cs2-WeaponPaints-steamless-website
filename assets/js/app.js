@@ -10,6 +10,55 @@
 	window.cs2PaintKitDataUrl = appConfig.paintKitDataUrl || '';
 	window.cs2PaintKitAliasDataUrl = appConfig.paintKitAliasDataUrl || '';
 	window.cs2PaintKitFinishBadges = appConfig.paintKitFinishBadges || {};
+			var floatingNoticeRegion = null;
+			var showFloatingNotice = function (message) {
+				if (!message) return;
+				if (!floatingNoticeRegion) {
+					floatingNoticeRegion = document.createElement('div');
+					floatingNoticeRegion.className = 'floating-notice-region';
+					floatingNoticeRegion.setAttribute('aria-live', 'polite');
+					floatingNoticeRegion.setAttribute('aria-atomic', 'true');
+					document.body.appendChild(floatingNoticeRegion);
+				}
+				var notice = document.createElement('div');
+				notice.className = 'floating-notice';
+				notice.setAttribute('role', 'status');
+				notice.setAttribute('data-floating-notice', '');
+				notice.textContent = message;
+				floatingNoticeRegion.appendChild(notice);
+				window.requestAnimationFrame(function () {
+					window.requestAnimationFrame(function () {
+						notice.classList.add('is-visible');
+						window.setTimeout(function () {
+							if (!notice.isConnected) return;
+							var removalFallback = null;
+							var finishRemoval = function () {
+								if (removalFallback !== null) window.clearTimeout(removalFallback);
+								notice.removeEventListener('transitionend', handleTransitionEnd);
+								if (notice.parentNode) notice.parentNode.removeChild(notice);
+								if (floatingNoticeRegion && !floatingNoticeRegion.firstChild) {
+									floatingNoticeRegion.parentNode.removeChild(floatingNoticeRegion);
+									floatingNoticeRegion = null;
+								}
+							};
+							var handleTransitionEnd = function (event) {
+								if (event.propertyName === 'opacity') finishRemoval();
+							};
+							notice.addEventListener('transitionend', handleTransitionEnd);
+							notice.classList.remove('is-visible');
+							notice.classList.add('is-dismissing');
+							removalFallback = window.setTimeout(finishRemoval, 400);
+						}, 3000);
+					});
+				});
+			};
+			app.showFloatingNotice = showFloatingNotice;
+			if (appConfig.floatingNotice) {
+				showFloatingNotice(appConfig.floatingNotice);
+			}
+			if (appConfig.showAdminAuthenticatedNotice === true) {
+				showFloatingNotice(appText.adminAuthenticated || '');
+			}
 			var themeToggle = document.querySelector('[data-theme-toggle]');
 			if (themeToggle) {
 				var themeTransitionTimer = null;
@@ -122,9 +171,155 @@
 				}
 			}
 
-			if (appConfig.showAdminError) {
 			var adminModalEl = document.getElementById('adminModal');
-			if (adminModalEl) bootstrap.Modal.getOrCreateInstance(adminModalEl).show();
+			var siteSettingsSuccess = document.querySelector('[data-site-settings-success]');
+			if (siteSettingsSuccess) {
+				var scheduleSiteSettingsSuccessDismissal = function () {
+					window.setTimeout(function () {
+						if (!siteSettingsSuccess.isConnected) return;
+						var removalFallback = null;
+						var finishRemoval = function () {
+							if (removalFallback !== null) window.clearTimeout(removalFallback);
+							siteSettingsSuccess.removeEventListener('transitionend', handleTransitionEnd);
+							if (siteSettingsSuccess.parentNode) siteSettingsSuccess.parentNode.removeChild(siteSettingsSuccess);
+						};
+						var handleTransitionEnd = function (event) {
+							if (event.propertyName === 'max-height') finishRemoval();
+						};
+						siteSettingsSuccess.addEventListener('transitionend', handleTransitionEnd);
+						siteSettingsSuccess.classList.add('is-dismissing');
+						removalFallback = window.setTimeout(finishRemoval, 600);
+					}, 3000);
+				};
+				if (adminModalEl) {
+					adminModalEl.addEventListener('shown.bs.modal', scheduleSiteSettingsSuccessDismissal, { once: true });
+				} else {
+					scheduleSiteSettingsSuccessDismissal();
+				}
+			}
+
+			if ((appConfig.showAdminModal || appConfig.showAdminError) && adminModalEl) {
+				bootstrap.Modal.getOrCreateInstance(adminModalEl).show();
+			}
+
+			var siteSettingsForm = document.getElementById('siteSettingsForm');
+			if (siteSettingsForm) {
+				var siteNameInputs = Array.from(siteSettingsForm.querySelectorAll('[data-site-name-input]'));
+				var serverAddressInput = siteSettingsForm.querySelector('[data-server-address-input]');
+				var serverPasswordInput = siteSettingsForm.querySelector('[data-server-password-input]');
+				var isValidServerAddress = function (value) {
+					value = value.trim();
+					if (value === '') return true;
+					var bracketed = value.match(/^\[([^\]]+)\]:(\d{1,5})$/);
+					var standard = value.match(/^([^:]+):(\d{1,5})$/);
+					var match = bracketed || standard;
+					if (!match) return false;
+					var port = Number(match[2]);
+					if (!Number.isInteger(port) || port < 1 || port > 65535) return false;
+					var host = match[1];
+					if (bracketed) {
+						if (!/^[0-9A-Fa-f:.]+$/.test(host) || host.indexOf(':') === -1) return false;
+						try {
+							new URL('http://[' + host + ']:' + port + '/');
+							return true;
+						} catch (error) {
+							return false;
+						}
+					}
+					var ipv4Parts = host.split('.');
+					var isIpv4 = ipv4Parts.length === 4 && ipv4Parts.every(function (part) {
+						return /^\d{1,3}$/.test(part) && Number(part) >= 0 && Number(part) <= 255;
+					});
+					var isHostname = /^(?=.{1,253}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)*[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/.test(host);
+					return isIpv4 || isHostname;
+				};
+				var validateSiteSettings = function () {
+					siteNameInputs.forEach(function (input) { input.setCustomValidity(''); });
+					if (siteNameInputs.length > 0 && !siteNameInputs.some(function (input) { return input.value.trim() !== ''; })) {
+						siteNameInputs[0].setCustomValidity(appText.siteSettingsNameRequired || '');
+					}
+					if (serverAddressInput) {
+						serverAddressInput.setCustomValidity(isValidServerAddress(serverAddressInput.value)
+							? ''
+							: (appText.serverAddressInvalid || ''));
+					}
+					if (serverPasswordInput) {
+						var password = serverPasswordInput.value.trim();
+						var passwordIsValid = password === '' || (password.length <= 128 && !/[\x00-\x20\x7F;"\\]/.test(password));
+						serverPasswordInput.setCustomValidity(passwordIsValid
+							? ''
+							: (appText.serverPasswordInvalid || ''));
+					}
+				};
+				var preventInvalidSiteSettingsSubmit = function (event) {
+					validateSiteSettings();
+					if (!siteSettingsForm.checkValidity()) {
+						event.preventDefault();
+						siteSettingsForm.reportValidity();
+					}
+				};
+				siteSettingsForm.addEventListener('submit', preventInvalidSiteSettingsSubmit);
+				var siteSettingsSubmitButton = document.querySelector('[type="submit"][form="siteSettingsForm"]');
+				if (siteSettingsSubmitButton) {
+					siteSettingsSubmitButton.addEventListener('click', preventInvalidSiteSettingsSubmit);
+				}
+				siteNameInputs.concat([serverAddressInput, serverPasswordInput].filter(Boolean)).forEach(function (input) {
+					input.addEventListener('input', function () {
+						input.setCustomValidity('');
+					});
+				});
+			}
+
+			var serverCommandModalEl = document.getElementById('serverCommandModal');
+			var serverCommandStatus = serverCommandModalEl ? serverCommandModalEl.querySelector('[data-server-command-status]') : null;
+			var serverCommandDisplay = serverCommandModalEl ? serverCommandModalEl.querySelector('[data-server-command-display]') : null;
+			var fallbackCopyText = function (text) {
+				var textarea = document.createElement('textarea');
+				textarea.value = text;
+				textarea.setAttribute('readonly', '');
+				textarea.style.position = 'fixed';
+				textarea.style.opacity = '0';
+				document.body.appendChild(textarea);
+				textarea.select();
+				var copied = false;
+				try {
+					copied = document.execCommand('copy');
+				} catch (error) {
+					copied = false;
+				}
+				textarea.remove();
+				return copied;
+			};
+			var copyServerCommand = function (command) {
+				if (navigator.clipboard && window.isSecureContext) {
+					return navigator.clipboard.writeText(command).then(function () {
+						return true;
+					}).catch(function () {
+						return fallbackCopyText(command);
+					});
+				}
+				return Promise.resolve(fallbackCopyText(command));
+			};
+			document.querySelectorAll('[data-server-command]').forEach(function (button) {
+				button.addEventListener('click', function () {
+					var command = button.dataset.serverCommand || '';
+					if (!command || !serverCommandModalEl) return;
+					if (serverCommandDisplay) serverCommandDisplay.value = command;
+					copyServerCommand(command).then(function (copied) {
+						if (serverCommandStatus) {
+							serverCommandStatus.textContent = copied
+								? (appText.serverCommandCopied || '')
+								: (appText.serverCommandCopyFailed || '');
+						}
+						bootstrap.Modal.getOrCreateInstance(serverCommandModalEl).show(button);
+						if (copied) showFloatingNotice(appText.serverCommandClipboardNotice || '');
+					});
+				});
+			});
+			if (serverCommandDisplay) {
+				serverCommandDisplay.addEventListener('focus', function () {
+					serverCommandDisplay.select();
+				});
 			}
 
 			var params = new URLSearchParams(location.search);
@@ -152,6 +347,39 @@
 			}, true);
 
 	app.scheduleStatusIndicatorFit = scheduleStatusIndicatorFit;
+
+	var idleTaskQueue = [];
+	var idleTaskScheduled = false;
+	var scheduleNextIdleTask = function () {
+		if (idleTaskScheduled || !idleTaskQueue.length) return;
+		idleTaskScheduled = true;
+		var runTask = function () {
+			idleTaskScheduled = false;
+			var task = idleTaskQueue.shift();
+			var result;
+			try {
+				result = task();
+			} catch (error) {
+				if (window.console && console.warn) console.warn(error);
+				scheduleNextIdleTask();
+				return;
+			}
+			Promise.resolve(result).then(scheduleNextIdleTask, function (error) {
+				if (window.console && console.warn) console.warn(error);
+				scheduleNextIdleTask();
+			});
+		};
+		if (typeof window.requestIdleCallback === 'function') {
+			window.requestIdleCallback(runTask, { timeout: 2500 });
+			return;
+		}
+		window.setTimeout(runTask, 1200);
+	};
+	app.scheduleIdleTask = function (task) {
+		if (typeof task !== 'function') return;
+		idleTaskQueue.push(task);
+		scheduleNextIdleTask();
+	};
 
 
 	app.fetchJson = function (url) {

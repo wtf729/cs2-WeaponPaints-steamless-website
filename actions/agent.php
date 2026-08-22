@@ -25,5 +25,6 @@
 			"agent_model_update" => $agentValue,
 		]);
 
+		queueFloatingNotice('agent_selection_saved');
 		go("index.php?action=edit&id={$id}&team={$team}");
 	}

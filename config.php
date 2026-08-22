@@ -8,6 +8,8 @@ define('AUTH_RATE_LIMIT_WINDOW_SECONDS', 1800); // Failure tracking window in se
 define('AUTH_RATE_LIMIT_LOCK_SECONDS', 60); // Lock duration in seconds
 define('ENABLE_SKIN_FUSION', true); // Allow cross-weapon paint combinations
 
+define('SERVER_ADDRESS', ''); // Hostname or IP with port; leave empty to hide the Connect to Server button
+define('SERVER_PASSWORD', ''); // Leave empty to launch CS2 directly; a value copies the console command instead
 define('SITE_ACCESS_PASSWORD', ''); // Set a password to enable access protection
 define('ADMIN_PASSWORD', ''); // Set a password to enable administrator mode
 

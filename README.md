@@ -37,9 +37,10 @@ This project is intended for private servers and trusted player groups. It is no
 * Five sticker slots per weapon, with fill-all, clear-all, and per-slot wear/position/scale/rotation settings
 * Keychain pattern template and X/Y offset settings
 * Searchable skin, sticker, keychain, music kit, and collectible pin pickers
-* Searchable experimental skin fusion for applying a paint kit to a different weapon or knife
+* Experimental skin fusion for applying a paint kit to a different weapon or knife
 * Optional website password and per-loadout PIN protection
-* Administrator mode for unrestricted loadout management and deletion
+* A top-right Connect to Server button that launches Steam directly or copies a password-protected console command
+* Administrator mode for unrestricted loadout management, deletion, and visitor-facing site settings
 * English and Simplified Chinese UI
 * Browser-switchable light and dark themes with local preference persistence and fallback images
 
@@ -60,6 +61,7 @@ Enabling PHP cURL and mbstring is recommended. The database account should have 
    ```php
    <?php
    define('DEFAULT_LANGUAGE', 'en'); // Available values: en, zh-CN
+   define('DEFAULT_WEB_THEME', 'dark'); // Available values: dark, light; visitors can switch it in the browser
    define('SITE_NAME_EN', 'CS2 Loadout Manager'); // English name and fallback
    define('SITE_NAME_ZH_CN', 'CS2 饰品管理器'); // Simplified Chinese name
    define('AUTH_RATE_LIMIT_ATTEMPTS', 5); // Failed attempts allowed within the time window
@@ -67,6 +69,8 @@ Enabling PHP cURL and mbstring is recommended. The database account should have 
    define('AUTH_RATE_LIMIT_LOCK_SECONDS', 60); // Lock duration in seconds
    define('ENABLE_SKIN_FUSION', true); // Allow cross-weapon paint combinations
 
+   define('SERVER_ADDRESS', ''); // Enter a hostname or IP with port; leave empty to hide the Connect to Server button
+   define('SERVER_PASSWORD', ''); // Leave empty to launch CS2 directly; a value copies the console command instead
    define('SITE_ACCESS_PASSWORD', ''); // Set a password to enable access protection
    define('ADMIN_PASSWORD', ''); // Leave empty to disable administrator mode
 
@@ -75,8 +79,6 @@ Enabling PHP cURL and mbstring is recommended. The database account should have 
    define('DB_NAME', 'your_db_name');
    define('DB_USER', 'your_db_user');
    define('DB_PASS', 'your_db_password');
-
-   define('DEFAULT_WEB_THEME', 'dark'); // Available values: dark, light; visitors can switch it in the browser
    ```
 
 3. Open the website:
@@ -97,9 +99,11 @@ The website automatically creates its helper tables and adds missing helper colu
 
 Global mode writes supported team-based settings to both T and CT. Music kits are managed globally, while agents are selected separately for T and CT.
 
+The creation form includes a help button beside **Steam64 ID**. A standard Steam profile URL contains the numeric Steam64 ID directly; custom profile URLs can be resolved using the third-party link shown in the help dialog. The resolver URL and label are translation fields in `class/translations.php`, so they can be replaced without changing the dialog markup.
+
 ### Skin Fusion (Experimental)
 
-Set `ENABLE_SKIN_FUSION` to `true`, open a weapon's **Skin** picker, then choose **Fusion Finish** to apply another paint kit to the current weapon or knife. The actual result depends on the installed WeaponPaints version and CS2 behavior.
+Set `ENABLE_SKIN_FUSION` to `true`, or enable fusion from the administrator's **Site Settings**, then open a weapon's **Skin** picker and choose **Fusion Finish** to apply another paint kit to the current weapon or knife. The actual result depends on the installed WeaponPaints version and CS2 behavior.
 
 ### Loadout PINs
 
@@ -112,6 +116,8 @@ Set `ENABLE_SKIN_FUSION` to `true`, open a weapon's **Skin** picker, then choose
 ### Administrator Mode
 
 Set `ADMIN_PASSWORD` in `config.php` to enable the administrator button. An administrator can bypass loadout PINs, edit any loadout, change or clear its PIN, and delete loadouts.
+
+After entering administrator mode, open the administrator button again to change the English and Chinese site names, default language, default theme, fusion setting, server address, and server password. The validated values are written directly to the corresponding allowlisted constants in `config.php`. The default language only affects visitors without a language preference, and the default theme does not override a theme saved in the visitor's browser.
 
 **Loadouts can only be deleted in administrator mode.**
 

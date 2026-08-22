@@ -17,6 +17,9 @@ $clientConfig = [
 	'requestedLoadoutPasswordTeam' => (string)($_GET['loadout_password_team'] ?? '1'),
 	'hasLoadoutPasswordError' => isset($_GET['loadout_password_error']),
 	'showAdminError' => $adminError !== '' && $accessGranted,
+	'showAdminModal' => ($adminError !== '' || ($siteSettingsStatus ?? '') !== '') && $accessGranted,
+	'showAdminAuthenticatedNotice' => ($adminAuthenticated ?? false) && $accessGranted,
+	'floatingNotice' => ($floatingNoticeKey ?? '') !== '' ? t($floatingNoticeKey) : '',
 	'text' => [
 		'stickerSlotSettings' => t('sticker_slot_settings'),
 		'stickerSaveFailed' => t('sticker_save_failed'),
@@ -26,9 +29,19 @@ $clientConfig = [
 		'chooseFusionFinishFor' => t('choose_fusion_finish_for'),
 		'noSticker' => t('no_sticker'),
 		'stickerSlot' => t('sticker_slot'),
+		'stickerSelectionSaved' => t('sticker_selection_saved'),
+		'stickerSettingsSaved' => t('sticker_settings_saved'),
 		'keychainSaveFailed' => t('keychain_save_failed'),
 		'keychain' => t('keychain'),
 		'noKeychain' => t('no_keychain'),
+		'keychainSelectionSaved' => t('keychain_selection_saved'),
+		'serverCommandCopied' => t('server_command_copied'),
+		'serverCommandCopyFailed' => t('server_command_copy_failed'),
+		'serverCommandClipboardNotice' => t('server_command_clipboard_notice'),
+		'adminAuthenticated' => t('admin_authenticated'),
+		'siteSettingsNameRequired' => t('site_settings_name_required'),
+		'serverAddressInvalid' => t('server_address_invalid'),
+		'serverPasswordInvalid' => t('server_password_invalid'),
 		'validationRequired' => t('validation_required'),
 		'validationNumberRange' => t('validation_number_range'),
 		'validationDecimalRange' => t('validation_decimal_range'),
@@ -39,4 +52,3 @@ $clientConfig = [
 require __DIR__ . '/views/layout/header.php';
 require __DIR__ . '/views/page.php';
 require __DIR__ . '/views/layout/footer.php';
-

@@ -4,18 +4,25 @@
 	var appText = appConfig.text || {};
 	var loadRemoteImage = app.loadRemoteImage;
 	var observePickerImages = app.observePickerImages;
+	var createImageCrossfadeStage = app.createImageCrossfadeStage;
+	var attachImageSpinnerFallback = app.attachImageSpinnerFallback;
 	var setStickerUnderlay = app.setModalUnderlay;
 	var markStickerBackdrop = app.markPickerBackdrop;
 	var fetchJson = app.fetchJson;
 	var fetchOptionalJson = app.fetchOptionalJson;
+	var scheduleIdleTask = app.scheduleIdleTask;
+	var showFloatingNotice = app.showFloatingNotice || function () {};
 	var dataLoadFailedMessage = appText.dataLoadFailed;
 			var stickerData = null;
+			var stickerDataPromise = null;
 			var stickerResultLimit = 90;
 			var activeStickerSlot = null;
 			var pickerEl = document.getElementById('stickerPickerModal');
 			var picker = pickerEl && window.bootstrap ? new bootstrap.Modal(pickerEl) : null;
 			var searchInput = pickerEl ? pickerEl.querySelector('.sticker-search') : null;
 			var resultsEl = pickerEl ? pickerEl.querySelector('[data-sticker-results]') : null;
+			var pickerBody = pickerEl ? pickerEl.querySelector('[data-sticker-picker-body]') : null;
+			var loadingState = pickerEl ? pickerEl.querySelector('[data-sticker-loading]') : null;
 			var stickerSearchTimer = null;
 			var activeAdvancedSlot = null;
 			var advancedEl = document.getElementById('stickerAdvancedModal');
@@ -193,10 +200,18 @@
 					setStickerUnderlay(null);
 				});
 			}
+			var setStickerPickerLoading = function (loading) {
+				if (pickerBody) {
+					pickerBody.classList.toggle('is-loading', loading);
+					pickerBody.setAttribute('aria-busy', loading ? 'true' : 'false');
+				}
+				if (loadingState) loadingState.hidden = !loading;
+			};
 
 			var loadStickers = function () {
 				if (stickerData) return Promise.resolve(stickerData);
-				return Promise.all([
+				if (stickerDataPromise) return stickerDataPromise;
+				stickerDataPromise = Promise.all([
 					fetchJson(window.cs2StickerDataUrl),
 					fetchOptionalJson(window.cs2StickerAliasDataUrl)
 				]).then(function (payloads) {
@@ -219,20 +234,26 @@
 							if (!id || seen[id]) return;
 							stickerData.push({ id: id, name: item.name || '', image: item.image || '', searchText: item.name || '' });
 						});
+						stickerDataPromise = null;
 						return stickerData;
+					}).catch(function (error) {
+						stickerDataPromise = null;
+						throw error;
 					});
+				return stickerDataPromise;
 			};
 
 			var renderStickerResults = function () {
 				if (!resultsEl || !stickerData) return;
 				var query = (searchInput ? searchInput.value : '').trim().toLowerCase();
 				var terms = query ? query.split(/\s+/).filter(Boolean) : [];
-				var shown = stickerData.filter(function (item) {
+				var matched = stickerData.filter(function (item) {
 					var searchText = (item.searchText || item.name || '').toLowerCase();
 					return !query || String(item.id) === query || terms.every(function (term) {
 						return searchText.indexOf(term) !== -1;
 					});
-				}).slice(0, stickerResultLimit);
+				});
+				var shown = matched.slice(0, stickerResultLimit);
 				resultsEl.innerHTML = '';
 				shown.forEach(function (item) {
 					var button = document.createElement('button');
@@ -242,11 +263,11 @@
 					button.dataset.stickerName = item.name;
 					button.dataset.stickerImage = item.image || '';
 					if (item.image) {
-						var image = document.createElement('img');
-						image.src = 'img/skins/sticker.png';
+						var imageStage = createImageCrossfadeStage('', '', 220);
+						attachImageSpinnerFallback(imageStage);
+						var image = imageStage.querySelector('.image-crossfade-layer.is-active');
 						image.dataset.remoteSrc = item.image;
-						image.alt = '';
-						button.appendChild(image);
+						button.appendChild(imageStage);
 					} else {
 						var empty = document.createElement('span');
 						empty.className = 'sticker-empty-icon';
@@ -258,6 +279,12 @@
 					button.appendChild(name);
 					resultsEl.appendChild(button);
 				});
+				if (matched.length > shown.length) {
+					var searchHint = document.createElement('p');
+					searchHint.className = 'picker-search-more-hint';
+					searchHint.textContent = resultsEl.dataset.searchMoreHint || '';
+					resultsEl.appendChild(searchHint);
+				}
 				observePickerImages(pickerEl);
 			};
 
@@ -375,19 +402,29 @@
 				if (openButton) {
 					activeStickerSlot = openButton.closest('.sticker-slot');
 					setStickerUnderlay(openButton.closest('.modal'));
+					if (stickerSearchTimer !== null) {
+						window.clearTimeout(stickerSearchTimer);
+						stickerSearchTimer = null;
+					}
+					if (searchInput) searchInput.value = '';
+					var needsLoading = !stickerData;
+					setStickerPickerLoading(needsLoading);
+					if (!needsLoading) renderStickerResults();
+					if (picker) {
+						picker.show();
+						setTimeout(markStickerBackdrop, 0);
+					}
+					if (!needsLoading) {
+						setTimeout(function () { if (searchInput) searchInput.focus(); }, 150);
+						return;
+					}
 					loadStickers().then(function () {
-						if (stickerSearchTimer !== null) {
-							window.clearTimeout(stickerSearchTimer);
-							stickerSearchTimer = null;
-						}
-						if (searchInput) searchInput.value = '';
 						renderStickerResults();
-						if (picker) {
-							picker.show();
-							setTimeout(markStickerBackdrop, 0);
-						}
+						setStickerPickerLoading(false);
 						setTimeout(function () { if (searchInput) searchInput.focus(); }, 150);
 					}).catch(function (error) {
+						setStickerPickerLoading(false);
+						if (picker) picker.hide();
 						activeStickerSlot = null;
 						setStickerUnderlay(null);
 						if (window.console && console.error) console.error(error);
@@ -409,6 +446,7 @@
 						syncStickerSettingsButton(activeStickerSlot);
 						syncStickerToolButtons(activeStickerSlot.closest('.sticker-section'));
 						if (picker) picker.hide();
+						showFloatingNotice(appText.stickerSelectionSaved);
 					}).catch(function (error) {
 						alert(error && error.message ? error.message : stickerSaveFailedMessage);
 					});
@@ -471,6 +509,7 @@
 						activeAdvancedSlot.dataset.savedStickerId = String(parts.id || '0');
 						syncStickerSettingsButton(activeAdvancedSlot);
 						if (advancedModal) advancedModal.hide();
+						showFloatingNotice(appText.stickerSettingsSaved);
 					}).catch(function (error) {
 						alert(error && error.message ? error.message : stickerSaveFailedMessage);
 					});
@@ -479,6 +518,10 @@
 
 			if (searchInput) {
 				searchInput.addEventListener('input', scheduleStickerResultsRender);
+			}
+
+			if (pickerEl && document.querySelector('[data-sticker-open]') && typeof scheduleIdleTask === 'function') {
+				scheduleIdleTask(loadStickers);
 			}
 
 	app.stickers = {

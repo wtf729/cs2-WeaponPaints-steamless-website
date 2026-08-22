@@ -5,6 +5,7 @@
 	var loadRemoteImage = app.loadRemoteImage;
 	var observePickerImages = app.observePickerImages;
 	var createImageCrossfadeStage = app.createImageCrossfadeStage;
+	var attachImageSpinnerFallback = app.attachImageSpinnerFallback;
 	var resetImageCrossfadeStage = app.resetImageCrossfadeStage;
 	var prepareImageCrossfade = app.prepareImageCrossfade;
 	var activateImageCrossfade = app.activateImageCrossfade;
@@ -12,10 +13,12 @@
 	var markStickerBackdrop = app.markPickerBackdrop;
 	var fetchJson = app.fetchJson;
 	var fetchOptionalJson = app.fetchOptionalJson;
+	var scheduleIdleTask = app.scheduleIdleTask;
 	var scheduleStatusIndicatorFit = app.scheduleStatusIndicatorFit;
 			var dataLoadFailedMessage = appText.dataLoadFailed;
 
 			var fusionData = null;
+			var fusionDataPromise = null;
 			var fusionTargetDefindex = 0;
 			var fusionTargetWeapon = '';
 			var fusionOfficialPaints = {};
@@ -25,6 +28,8 @@
 			var fusionPickerTitle = fusionPickerEl ? fusionPickerEl.querySelector('[data-fusion-picker-title]') : null;
 			var fusionSearchInput = fusionPickerEl ? fusionPickerEl.querySelector('.fusion-search') : null;
 			var fusionResultsEl = fusionPickerEl ? fusionPickerEl.querySelector('[data-fusion-results]') : null;
+			var fusionPickerBody = fusionPickerEl ? fusionPickerEl.querySelector('[data-fusion-picker-body]') : null;
+			var fusionLoadingState = fusionPickerEl ? fusionPickerEl.querySelector('[data-fusion-loading]') : null;
 			var fusionSourceEl = document.getElementById('fusionSourceModal');
 			var fusionSourceModal = fusionSourceEl && window.bootstrap ? new bootstrap.Modal(fusionSourceEl) : null;
 			var fusionSourcePaintName = fusionSourceEl ? fusionSourceEl.querySelector('[data-fusion-source-paint-name]') : null;
@@ -52,9 +57,6 @@
 			var fusionTransitionDuration = 220;
 			var fusionForm = document.getElementById('fusionSkinForm');
 			var fusionFormaInput = fusionForm ? fusionForm.querySelector('[data-fusion-forma]') : null;
-			var fusionPlaceholder = function () {
-				return 'img/skins/sticker.png';
-			};
 			var createPaintKitFinishBadge = function (paint) {
 				var badge = window.cs2PaintKitFinishBadges && window.cs2PaintKitFinishBadges[String(paint)];
 				if (!badge) return null;
@@ -203,9 +205,17 @@
 				var parts = String(name || '').split('|');
 				return (parts.length > 1 ? parts.slice(1).join('|') : parts[0]).trim();
 			};
+			var setFusionPickerLoading = function (loading) {
+				if (fusionPickerBody) {
+					fusionPickerBody.classList.toggle('is-loading', loading);
+					fusionPickerBody.setAttribute('aria-busy', loading ? 'true' : 'false');
+				}
+				if (fusionLoadingState) fusionLoadingState.hidden = !loading;
+			};
 			var loadFusionPaintKits = function () {
 				if (fusionData) return Promise.resolve(fusionData);
-				return Promise.all([
+				if (fusionDataPromise) return fusionDataPromise;
+				fusionDataPromise = Promise.all([
 					fetchJson(window.cs2PaintKitDataUrl),
 					fetchOptionalJson(window.cs2PaintKitAliasDataUrl)
 				]).then(function (payloads) {
@@ -238,8 +248,13 @@
 						if (aHasMultipleSources !== bHasMultipleSources) return aHasMultipleSources ? -1 : 1;
 						return a.paint - b.paint;
 					});
+					fusionDataPromise = null;
 					return fusionData;
+				}).catch(function (error) {
+					fusionDataPromise = null;
+					throw error;
 				});
+				return fusionDataPromise;
 			};
 			var preloadFusionWindow = function (card, sourceIndex) {
 				var sources = card._fusionSources || [];
@@ -326,7 +341,7 @@
 				card._fusionInitialized = true;
 				card._fusionSourceIndex = -1;
 				card._fusionBusy = false;
-				resetImageCrossfadeStage(card.querySelector('.image-crossfade-stage'), fusionPlaceholder());
+				resetImageCrossfadeStage(card.querySelector('.image-crossfade-stage'), '');
 				if (!sources.length) return;
 				if (fusionImageIsReady(sources[0].image)) {
 					resetImageCrossfadeStage(card.querySelector('.image-crossfade-stage'), sources[0].image);
@@ -432,10 +447,11 @@
 				if (!fusionResultsEl || !fusionData) return;
 				var query = (fusionSearchInput ? fusionSearchInput.value : '').trim().toLowerCase();
 				var terms = query ? query.split(/\s+/).filter(Boolean) : [];
-				var shown = fusionData.filter(function (item) {
+				var matched = fusionData.filter(function (item) {
 					var searchText = (item.searchText || '').toLowerCase();
 					return !query || String(item.paint) === query || terms.every(function (term) { return searchText.indexOf(term) !== -1; });
-				}).slice(0, 80);
+				});
+				var shown = matched.slice(0, 80);
 				var resultFragment = document.createDocumentFragment();
 				shown.forEach(function (item) {
 					var cacheKey = String(item.paint);
@@ -450,7 +466,8 @@
 					card._fusionSources = item.sources;
 					card._fusionSourceIndex = -1;
 					if (fusionOfficialPaints[item.paint]) card.classList.add('is-native-finish');
-					var imageStage = createImageCrossfadeStage(fusionPlaceholder(), '', fusionTransitionDuration);
+					var imageStage = createImageCrossfadeStage('', '', fusionTransitionDuration);
+					attachImageSpinnerFallback(imageStage);
 					card.appendChild(imageStage);
 					var indicators = document.createElement('div');
 					indicators.className = 'fusion-result-indicators';
@@ -482,6 +499,12 @@
 					}
 					resultFragment.appendChild(card);
 				});
+				if (matched.length > shown.length) {
+					var searchHint = document.createElement('p');
+					searchHint.className = 'picker-search-more-hint';
+					searchHint.textContent = fusionResultsEl.dataset.searchMoreHint || '';
+					resultFragment.appendChild(searchHint);
+				}
 				fusionResultsEl.replaceChildren(resultFragment);
 				observeFusionCards();
 				scheduleStatusIndicatorFit();
@@ -496,11 +519,11 @@
 					card.className = 'fusion-source-result';
 					var finishBadge = createPaintKitFinishBadge(item.paint);
 					if (finishBadge) card.appendChild(finishBadge);
-					var image = document.createElement('img');
-					image.src = fusionPlaceholder();
+					var imageStage = createImageCrossfadeStage('', '', fusionTransitionDuration);
+					attachImageSpinnerFallback(imageStage);
+					var image = imageStage.querySelector('.image-crossfade-layer.is-active');
 					image.dataset.remoteSrc = source.image || '';
-					image.alt = '';
-					card.appendChild(image);
+					card.appendChild(imageStage);
 					var name = document.createElement('span');
 					name.className = 'fusion-source-name';
 					name.textContent = source.sourceName;
@@ -567,11 +590,22 @@
 					});
 					fusionParentModal = fusionOpenButton.closest('.modal');
 					setStickerUnderlay(fusionParentModal);
+					if (fusionSearchTimer !== null) {
+						window.clearTimeout(fusionSearchTimer);
+						fusionSearchTimer = null;
+					}
+					if (fusionSearchInput) fusionSearchInput.value = '';
+					var needsLoading = !fusionData;
+					setFusionPickerLoading(needsLoading);
+					if (!needsLoading) renderFusionResults();
+					if (fusionPicker) fusionPicker.show();
+					if (!needsLoading) return;
 					loadFusionPaintKits().then(function () {
-						if (fusionSearchInput) fusionSearchInput.value = '';
 						renderFusionResults();
-						if (fusionPicker) fusionPicker.show();
+						setFusionPickerLoading(false);
 					}).catch(function (error) {
+						setFusionPickerLoading(false);
+						if (fusionPicker) fusionPicker.hide();
 						setStickerUnderlay(null);
 						if (window.console && console.error) console.error(error);
 						alert(dataLoadFailedMessage);
@@ -597,6 +631,10 @@
 				event.preventDefault();
 				submitFusionPaint(card);
 			});
+
+			if (fusionPickerEl && document.querySelector('[data-fusion-open]') && typeof scheduleIdleTask === 'function') {
+				scheduleIdleTask(loadFusionPaintKits);
+			}
 
 	app.fusion = {
 		pickerEl: fusionPickerEl, picker: fusionPicker,

@@ -87,6 +87,3 @@ if ($action === 'edit') {
 $presets = $accessGranted ? $db->select("SELECT * FROM `{$presetTable}` ORDER BY `created_time` ASC, `id` ASC") : [];
 $returnTo = 'index.php' . (!empty($_SERVER['QUERY_STRING']) ? '?' . $_SERVER['QUERY_STRING'] : '');
 $returnTo = safeReturnUrl($returnTo);
-$configuredWebTheme = defined('DEFAULT_WEB_THEME') ? strtolower(trim((string)DEFAULT_WEB_THEME)) : 'dark';
-$defaultWebTheme = in_array($configuredWebTheme, ['dark', 'light'], true) ? $configuredWebTheme : 'dark';
-

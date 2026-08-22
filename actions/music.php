@@ -37,5 +37,6 @@
 			throw $exception;
 		}
 
+		queueFloatingNotice('music_selection_saved');
 		go("index.php?action=edit&id={$id}&team={$team}");
 	}

@@ -4,6 +4,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !verifyCsrfRequest()) {
 	rejectInvalidCsrf();
 }
 
+$db = new DataBase();
+applySiteSettingsContext(siteSettingDefaults());
+
 $message = '';
 $error = '';
 $accessError = '';
@@ -39,7 +42,6 @@ if (!$accessGranted) {
 }
 
 if ($accessGranted) {
-	$db = new DataBase();
 	ensurePresetTable($db, $presetTable);
 	ensureSkinSettingsTable($db, $skinSettingsTable);
 }

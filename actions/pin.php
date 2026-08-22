@@ -37,5 +37,6 @@
 			throw $exception;
 		}
 
+		queueFloatingNotice('pin_selection_saved');
 		go("index.php?action=edit&id={$id}&team={$team}");
 	}

@@ -1,4 +1,11 @@
 		<?php if ($accessGranted) : ?>
+			<?php if (serverConnectUri() !== '') : ?>
+				<?php if (serverPassword() !== '') : ?>
+					<button class="server-connect-button" type="button" data-server-command="<?= h(serverConsoleCommand()) ?>" aria-haspopup="dialog" aria-label="<?= h(t('join_server')) ?>" title="<?= h(t('join_server')) ?>"><?= h(t('join_server')) ?></button>
+				<?php else : ?>
+					<a class="server-connect-button" href="<?= h(serverConnectUri()) ?>" aria-label="<?= h(t('join_server')) ?>" title="<?= h(t('join_server')) ?>"><?= h(t('join_server')) ?></a>
+				<?php endif; ?>
+			<?php endif; ?>
 			<button class="admin-button<?= isAdmin() ? ' active' : '' ?>" type="button" data-bs-toggle="modal" data-bs-target="#adminModal" aria-label="<?= h(isAdmin() ? t('admin_enabled') : t('admin')) ?>" title="<?= h(isAdmin() ? t('admin_enabled') : t('admin')) ?>">
 				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4.5 6v5.2c0 4.6 3.1 8.2 7.5 9.8 4.4-1.6 7.5-5.2 7.5-9.8V6L12 3Z"></path><path d="M9.5 12.2 11.2 14l3.6-4"></path></svg>
 			</button>

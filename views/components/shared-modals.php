@@ -5,11 +5,15 @@
 					<h5 class="modal-title"><?= h(t('choose_sticker')) ?></h5>
 					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= h(t('close')) ?>"></button>
 				</div>
-				<div class="modal-body picker-modal-body">
+				<div class="modal-body picker-modal-body" aria-busy="false" data-sticker-picker-body>
+					<div class="picker-loading-state" role="status" aria-live="polite" aria-atomic="true" data-sticker-loading hidden>
+						<span class="picker-loading-label"><?= h(t('loading')) ?></span>
+						<span class="cs2-spinner cs2-spinner--lg" aria-hidden="true"></span>
+					</div>
 					<div class="picker-search-bar">
 						<input type="search" class="form-control sticker-search" placeholder="<?= h(t('search_sticker')) ?>" autocomplete="off">
 					</div>
-					<div class="sticker-picker-grid picker-results-scroll" data-sticker-results></div>
+					<div class="sticker-picker-grid picker-results-scroll" data-sticker-results data-search-more-hint="<?= h(t('sticker_search_more_hint')) ?>"></div>
 				</div>
 			</div>
 		</div>
@@ -63,7 +67,11 @@
 					<h5 class="modal-title"><?= h(t('choose_keychain')) ?></h5>
 					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= h(t('close')) ?>"></button>
 				</div>
-				<div class="modal-body picker-modal-body">
+				<div class="modal-body picker-modal-body" aria-busy="false" data-keychain-picker-body>
+					<div class="picker-loading-state" role="status" aria-live="polite" aria-atomic="true" data-keychain-loading hidden>
+						<span class="picker-loading-label"><?= h(t('loading')) ?></span>
+						<span class="cs2-spinner cs2-spinner--lg" aria-hidden="true"></span>
+					</div>
 					<div class="picker-search-bar">
 						<input type="search" class="form-control keychain-search" placeholder="<?= h(t('search_keychain')) ?>" autocomplete="off">
 					</div>
@@ -83,11 +91,15 @@
 						</div>
 						<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= h(t('close')) ?>"></button>
 					</div>
-					<div class="modal-body picker-modal-body">
+					<div class="modal-body picker-modal-body" aria-busy="false" data-fusion-picker-body>
+						<div class="picker-loading-state" role="status" aria-live="polite" aria-atomic="true" data-fusion-loading hidden>
+							<span class="picker-loading-label"><?= h(t('loading')) ?></span>
+							<span class="cs2-spinner cs2-spinner--lg" aria-hidden="true"></span>
+						</div>
 						<div class="picker-search-bar">
 							<input type="search" class="form-control fusion-search" placeholder="<?= h(t('search_fusion_finish')) ?>" autocomplete="off">
 						</div>
-						<div class="fusion-picker-grid picker-results-scroll" data-fusion-results></div>
+						<div class="fusion-picker-grid picker-results-scroll" data-fusion-results data-search-more-hint="<?= h(t('fusion_search_more_hint')) ?>"></div>
 					</div>
 				</div>
 			</div>
@@ -148,18 +160,108 @@
 			</div>
 		</div>
 
+		<?php if (serverAddress() !== '' && serverPassword() !== '') : ?>
+			<div class="modal fade" id="serverCommandModal" tabindex="-1" aria-hidden="true">
+				<div class="modal-dialog modal-dialog-centered">
+					<div class="modal-content">
+						<div class="modal-header">
+							<h5 class="modal-title"><?= h(t('join_server')) ?></h5>
+							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= h(t('close')) ?>"></button>
+						</div>
+						<div class="modal-body form-grid">
+							<p class="hint" role="status" data-server-command-status><?= h(t('server_command_copied')) ?></p>
+							<label><?= h(t('server_command_label')) ?>
+								<input class="form-control" type="text" value="<?= h(serverConsoleCommand()) ?>" readonly data-server-command-display>
+							</label>
+						</div>
+						<div class="modal-footer">
+							<button type="button" class="btn btn-primary" data-bs-dismiss="modal"><?= h(t('close')) ?></button>
+						</div>
+					</div>
+				</div>
+			</div>
+		<?php endif; ?>
+
 		<div class="modal fade" id="adminModal" tabindex="-1" aria-hidden="true">
-			<div class="modal-dialog modal-dialog-centered modal-sm">
+			<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable <?= isAdmin() ? 'modal-lg' : 'modal-sm' ?>">
 				<div class="modal-content">
-					<div class="modal-header">
-						<h5 class="modal-title"><?= h(isAdmin() ? t('admin_enabled') : t('admin_login')) ?></h5>
+					<div class="modal-header<?= isAdmin() ? ' admin-settings-modal-header' : '' ?>">
+						<?php if (isAdmin()) : ?>
+							<div class="admin-settings-heading">
+								<div class="admin-settings-heading-row">
+									<h5 class="modal-title"><?= h(t('site_settings')) ?></h5>
+									<span class="admin-mode-badge"><span aria-hidden="true"></span><?= h(t('admin_mode_badge')) ?></span>
+								</div>
+							</div>
+						<?php else : ?>
+							<h5 class="modal-title"><?= h(t('admin_login')) ?></h5>
+						<?php endif; ?>
 						<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= h(t('cancel')) ?>"></button>
 					</div>
-					<div class="modal-body">
+					<div class="modal-body<?= isAdmin() ? ' admin-settings-modal-body' : '' ?>">
 						<?php if (adminPassword() === '') : ?>
 							<div class="alert alert-info mb-0"><?= h(t('admin_disabled')) ?></div>
 						<?php elseif (isAdmin()) : ?>
-							<p class="hint"><?= h(t('admin_enabled')) ?></p>
+							<?php if (($siteSettingsStatus ?? '') !== '') : ?>
+								<div class="alert <?= $siteSettingsStatus === 'saved' ? 'alert-success admin-settings-status' : 'alert-danger' ?>" role="status"<?= $siteSettingsStatus === 'saved' ? ' data-site-settings-success' : '' ?>>
+									<?= h(t('site_settings_' . $siteSettingsStatus)) ?>
+								</div>
+							<?php endif; ?>
+							<form method="post" class="admin-settings-form" id="siteSettingsForm">
+								<?= csrfInput() ?>
+								<input type="hidden" name="action" value="save_site_settings">
+								<input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
+								<div class="admin-settings-layout">
+									<div class="admin-settings-section">
+										<div class="admin-settings-fields">
+											<label><?= h(t('site_name_en')) ?>
+												<input class="form-control" type="text" name="site_name_en" value="<?= h(siteSetting('site_name_en')) ?>" maxlength="100" data-site-name-input>
+											</label>
+											<label><?= h(t('site_name_zh_cn')) ?>
+												<input class="form-control" type="text" name="site_name_zh_cn" value="<?= h(siteSetting('site_name_zh_cn')) ?>" maxlength="100" data-site-name-input>
+											</label>
+										</div>
+									</div>
+									<div class="admin-settings-section">
+										<div class="admin-settings-fields">
+											<label><?= h(t('default_language')) ?>
+												<select class="form-select" name="default_language">
+													<?php foreach ($availableLanguages as $languageCode => $languageName) : ?>
+														<option value="<?= h($languageCode) ?>"<?= siteSetting('default_language') === $languageCode ? ' selected' : '' ?>><?= h($languageName) ?></option>
+													<?php endforeach; ?>
+												</select>
+											</label>
+											<label><?= h(t('default_theme')) ?>
+												<select class="form-select" name="default_web_theme">
+													<option value="dark"<?= siteSetting('default_web_theme') === 'dark' ? ' selected' : '' ?>><?= h(t('theme_dark')) ?></option>
+													<option value="light"<?= siteSetting('default_web_theme') === 'light' ? ' selected' : '' ?>><?= h(t('theme_light')) ?></option>
+												</select>
+											</label>
+										</div>
+									</div>
+									<div class="admin-settings-section admin-settings-section-wide">
+										<div class="admin-settings-fields admin-settings-fields-split">
+											<label><?= h(t('server_address')) ?>
+												<input class="form-control" type="text" name="server_address" value="<?= h(serverAddress()) ?>" maxlength="261" autocomplete="off" spellcheck="false" data-server-address-input>
+												<small><?= h(t('server_address_hint')) ?></small>
+											</label>
+											<label><?= h(t('server_password')) ?>
+												<input class="form-control" type="text" name="server_password" value="<?= h(serverPassword()) ?>" maxlength="128" autocomplete="off" spellcheck="false" pattern="[^\s;&quot;;\\]+" data-server-password-input>
+												<small><?= h(t('server_password_hint')) ?></small>
+											</label>
+										</div>
+									</div>
+									<div class="admin-settings-section admin-settings-section-wide">
+										<label class="admin-setting-toggle form-check form-switch" for="enableSkinFusionSetting">
+											<input class="form-check-input" type="checkbox" role="switch" id="enableSkinFusionSetting" name="enable_skin_fusion" value="1"<?= siteSettingEnabled('enable_skin_fusion') ? ' checked' : '' ?>>
+											<span>
+												<strong><?= h(t('enable_skin_fusion')) ?></strong>
+												<small><?= h(t('enable_skin_fusion_hint')) ?></small>
+											</span>
+										</label>
+									</div>
+								</div>
+							</form>
 						<?php else : ?>
 							<?php if ($adminError) : ?>
 								<div class="alert alert-danger"><?= h($adminError === 'rate_limited' ? sprintf(t('auth_rate_limited'), max(1, $adminRetryAfter)) : t('admin_invalid')) ?></div>
@@ -175,16 +277,20 @@
 						<?php endif; ?>
 					</div>
 					<?php if (adminPassword() !== '') : ?>
-						<div class="modal-footer">
-							<button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?= h(t('back')) ?></button>
+						<div class="modal-footer<?= isAdmin() ? ' admin-settings-footer' : '' ?>">
 							<?php if (isAdmin()) : ?>
-								<form method="post">
+								<form method="post" class="admin-settings-logout">
 									<?= csrfInput() ?>
 									<input type="hidden" name="action" value="admin_logout">
 									<input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
 									<button class="btn btn-outline-danger" type="submit"><?= h(t('admin_exit')) ?></button>
 								</form>
+								<div class="admin-settings-footer-actions">
+									<button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?= h(t('back')) ?></button>
+									<button class="btn btn-primary" type="submit" form="siteSettingsForm"><?= h(t('save_settings')) ?></button>
+								</div>
 							<?php else : ?>
+								<button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?= h(t('back')) ?></button>
 								<button class="btn btn-primary" type="submit" form="adminLoginForm"><?= h(t('admin_enter')) ?></button>
 							<?php endif; ?>
 						</div>

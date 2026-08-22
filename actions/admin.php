@@ -14,6 +14,7 @@ if ($accessGranted && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action']
 		$_SESSION['is_admin'] = true;
 		$_SESSION['cs2_admin_key'] = hash('sha256', adminPassword());
 		session_regenerate_id(true);
+		$_SESSION['cs2_admin_authenticated'] = true;
 		go($returnTo);
 	}
 	$adminRetryAfter = authRateLimit('admin', '', 'fail');
@@ -52,4 +53,5 @@ if ($accessGranted && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action']
 
 $adminError = (string)($_SESSION['cs2_admin_error'] ?? '');
 $adminRetryAfter = max(0, (int)($_SESSION['cs2_admin_retry_after'] ?? 0));
-unset($_SESSION['cs2_admin_error'], $_SESSION['cs2_admin_retry_after']);
+$adminAuthenticated = !empty($_SESSION['cs2_admin_authenticated']);
+unset($_SESSION['cs2_admin_error'], $_SESSION['cs2_admin_retry_after'], $_SESSION['cs2_admin_authenticated']);

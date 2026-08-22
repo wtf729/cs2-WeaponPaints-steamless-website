@@ -82,14 +82,18 @@
 								<?= h(t('select')) ?>
 							</button>
 						</div>
-						<div class="modal fade skin-picker-modal" id="pinModal" tabindex="-1" aria-hidden="true">
+						<div class="modal fade skin-picker-modal" id="pinModal" tabindex="-1" aria-hidden="true" data-picker-deferred-init>
 							<div class="modal-dialog modal-lg modal-dialog-scrollable modal-dialog-centered">
 								<div class="modal-content">
 									<div class="modal-header">
 										<h5 class="modal-title"><?= h(t('choose_pin')) ?></h5>
 										<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= h(t('close')) ?>"></button>
 									</div>
-									<div class="modal-body picker-modal-body">
+									<div class="modal-body picker-modal-body" aria-busy="false" data-picker-deferred-body>
+										<div class="picker-loading-state" role="status" aria-live="polite" aria-atomic="true" data-picker-deferred-loading hidden>
+											<span class="picker-loading-label"><?= h(t('loading')) ?></span>
+											<span class="cs2-spinner cs2-spinner--lg" aria-hidden="true"></span>
+										</div>
 										<div class="picker-search-bar">
 											<input type="search" class="form-control picker-search" placeholder="<?= h(t('search_pin')) ?>" autocomplete="off" data-picker-search>
 										</div>

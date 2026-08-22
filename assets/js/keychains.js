@@ -6,15 +6,20 @@
 	var observePickerImages = app.observePickerImages;
 	var setStickerUnderlay = app.setModalUnderlay;
 	var markStickerBackdrop = app.markPickerBackdrop;
+	var showFloatingNotice = app.showFloatingNotice || function () {};
 	var fetchJson = app.fetchJson;
 	var fetchOptionalJson = app.fetchOptionalJson;
+	var scheduleIdleTask = app.scheduleIdleTask;
 	var dataLoadFailedMessage = appText.dataLoadFailed;
 			var keychainData = null;
+			var keychainDataPromise = null;
 			var activeKeychainSlot = null;
 			var keychainPickerEl = document.getElementById('keychainPickerModal');
 			var keychainPicker = keychainPickerEl && window.bootstrap ? new bootstrap.Modal(keychainPickerEl) : null;
 			var keychainSearchInput = keychainPickerEl ? keychainPickerEl.querySelector('.keychain-search') : null;
 			var keychainResultsEl = keychainPickerEl ? keychainPickerEl.querySelector('[data-keychain-results]') : null;
+			var keychainPickerBody = keychainPickerEl ? keychainPickerEl.querySelector('[data-keychain-picker-body]') : null;
+			var keychainLoadingState = keychainPickerEl ? keychainPickerEl.querySelector('[data-keychain-loading]') : null;
 			var keychainDefaults = { template: 1, x: 0, y: 0, z: 0 };
 			var keychainConfig = {
 				template: { min: 1, max: 99999, decimals: 0, defaultValue: 1 },
@@ -155,7 +160,8 @@
 			};
 			var loadKeychains = function () {
 				if (keychainData) return Promise.resolve(keychainData);
-				return Promise.all([
+				if (keychainDataPromise) return keychainDataPromise;
+				keychainDataPromise = Promise.all([
 					fetchJson(window.cs2KeychainDataUrl),
 					fetchOptionalJson(window.cs2KeychainAliasDataUrl)
 				]).then(function (payloads) {
@@ -178,8 +184,13 @@
 						if (!id || seen[id]) return;
 						keychainData.push({ id: id, name: item.name || '', image: item.image || '', searchText: item.name || '' });
 					});
+					keychainDataPromise = null;
 					return keychainData;
+				}).catch(function (error) {
+					keychainDataPromise = null;
+					throw error;
 				});
+				return keychainDataPromise;
 			};
 			var renderKeychainResults = function () {
 				if (!keychainResultsEl || !keychainData) return;
@@ -239,6 +250,13 @@
 					return payload;
 				});
 			};
+			var setKeychainPickerLoading = function (loading) {
+				if (keychainPickerBody) {
+					keychainPickerBody.classList.toggle('is-loading', loading);
+					keychainPickerBody.setAttribute('aria-busy', loading ? 'true' : 'false');
+				}
+				if (keychainLoadingState) keychainLoadingState.hidden = !loading;
+			};
 			if (keychainPickerEl) {
 				keychainPickerEl.addEventListener('shown.bs.modal', function () {
 					markStickerBackdrop();
@@ -279,15 +297,25 @@
 				if (keychainOpenButton) {
 					activeKeychainSlot = keychainOpenButton.closest('[data-keychain-slot]');
 					setStickerUnderlay(keychainOpenButton.closest('.modal'));
+					if (keychainSearchInput) keychainSearchInput.value = '';
+					var needsLoading = !keychainData;
+					setKeychainPickerLoading(needsLoading);
+					if (!needsLoading) renderKeychainResults();
+					if (keychainPicker) {
+						keychainPicker.show();
+						setTimeout(markStickerBackdrop, 0);
+					}
+					if (!needsLoading) {
+						setTimeout(function () { if (keychainSearchInput) keychainSearchInput.focus(); }, 150);
+						return;
+					}
 					loadKeychains().then(function () {
-						if (keychainSearchInput) keychainSearchInput.value = '';
 						renderKeychainResults();
-						if (keychainPicker) {
-							keychainPicker.show();
-							setTimeout(markStickerBackdrop, 0);
-						}
+						setKeychainPickerLoading(false);
 						setTimeout(function () { if (keychainSearchInput) keychainSearchInput.focus(); }, 150);
 					}).catch(function (error) {
+						setKeychainPickerLoading(false);
+						if (keychainPicker) keychainPicker.hide();
 						activeKeychainSlot = null;
 						setStickerUnderlay(null);
 						if (window.console && console.error) console.error(error);
@@ -307,11 +335,16 @@
 						activeKeychainSlot.dataset.savedKeychainId = String(id || '0');
 						syncKeychainInlineControls(activeKeychainSlot, parseKeychainValue(valueInput ? valueInput.value : ''));
 						if (keychainPicker) keychainPicker.hide();
+						showFloatingNotice(appText.keychainSelectionSaved);
 					}).catch(function (error) {
 						alert(error && error.message ? error.message : keychainSaveFailedMessage);
 					});
 				}
 			});
+
+			if (keychainPickerEl && document.querySelector('[data-keychain-open]') && typeof scheduleIdleTask === 'function') {
+				scheduleIdleTask(loadKeychains);
+			}
 
 	app.keychains = { pickerEl: keychainPickerEl, picker: keychainPicker };
 

@@ -21,28 +21,20 @@ $availableLanguages = ['zh-CN' => '简体中文', 'en' => 'English'];
 $languageCookieName = 'cs2_wp_lang';
 $cookiePath = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/');
 $cookiePath = $cookiePath === '' ? '/' : $cookiePath . '/';
-$requestedLanguage = $_GET['lang'] ?? $_COOKIE[$languageCookieName] ?? (defined('DEFAULT_LANGUAGE') ? DEFAULT_LANGUAGE : 'zh-CN');
-$currentLanguage = array_key_exists($requestedLanguage, $availableLanguages) ? $requestedLanguage : 'zh-CN';
-if (isset($_GET['lang']) && array_key_exists($_GET['lang'], $availableLanguages)) {
-	setcookie($languageCookieName, $currentLanguage, [
-		'expires' => time() + 60 * 60 * 24 * 365,
-		'path' => $cookiePath,
-		'secure' => $isHttps,
-		'httponly' => false,
-		'samesite' => 'Lax',
-	]);
-}
+$siteSettings = siteSettingDefaults();
+setRuntimeSiteSettings($siteSettings);
+$currentLanguage = siteSetting('default_language', 'zh-CN');
 UtilsClass::setLanguage($currentLanguage);
 
 $siteNames = [
-	'en' => defined('SITE_NAME_EN') ? trim((string)SITE_NAME_EN) : '',
-	'zh-CN' => defined('SITE_NAME_ZH_CN') ? trim((string)SITE_NAME_ZH_CN) : '',
+	'en' => siteSetting('site_name_en'),
+	'zh-CN' => siteSetting('site_name_zh_cn'),
 ];
-$siteNameFallback = 'CS2 WeaponPaints Loadout Manager';
+$siteNameFallback = 'CS2 Loadout Manager';
 $siteName = $siteNames[$currentLanguage] !== ''
 	? $siteNames[$currentLanguage]
 	: ($siteNames['en'] !== '' ? $siteNames['en'] : $siteNameFallback);
 $teams = $currentLanguage === 'en'
 	? [1 => 'Global', 2 => 'T', 3 => 'CT']
 	: [1 => '全局', 2 => 'T 阵营', 3 => 'CT 阵营'];
-
+$defaultWebTheme = siteSetting('default_web_theme', 'dark');

@@ -29,6 +29,21 @@ function go($url)
 	exit;
 }
 
+function queueFloatingNotice($translationKey)
+{
+	$translationKey = trim((string)$translationKey);
+	if ($translationKey !== '') {
+		$_SESSION['cs2_floating_notice'] = $translationKey;
+	}
+}
+
+function pullFloatingNoticeKey()
+{
+	$translationKey = trim((string)($_SESSION['cs2_floating_notice'] ?? ''));
+	unset($_SESSION['cs2_floating_notice']);
+	return $translationKey;
+}
+
 function languageUrl($language)
 {
 	$query = $_GET;

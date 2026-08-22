@@ -27,9 +27,11 @@
 
 		$ex = explode("-", (string)($_POST['skin_forma'] ?? $_POST['forma'] ?? ''));
 		$isSkinSelection = array_key_exists('skin_forma', $_POST);
+		$selectionNoticeKey = '';
 		$db->beginTransaction();
 		try {
 		if (($ex[0] ?? '') === 'knife' && isset($ex[1]) && array_key_exists((int)$ex[1], $knifes)) {
+			$selectionNoticeKey = 'knife_selection_saved';
 			$knifeKey = (int)$ex[1];
 			$knifeDefindexes = knifeDefindexes($knifes);
 			foreach (writeTeams($team) as $targetTeam) {
@@ -58,6 +60,7 @@
 				}
 			}
 		} elseif (($ex[0] ?? '') === 'glove' && isset($ex[1]) && array_key_exists((int)$ex[1], $gloves)) {
+			$selectionNoticeKey = 'glove_selection_saved';
 			$gloveDefindex = (int)$ex[1];
 			$gloveDefindexes = gloveDefindexes($gloves);
 			if (tableExists($db, 'wp_player_gloves')) {
@@ -168,6 +171,7 @@
 		} elseif (($ex[0] ?? '') === 'gloveskin' && isset($ex[1], $ex[2])
 			&& ((array_key_exists((int)$ex[1], $gloves) && array_key_exists((int)$ex[2], $gloves[(int)$ex[1]] ?? []))
 				|| (!$isSkinSelection && isSelectedSkinPaint($selectedSkins, (int)$ex[1], (int)$ex[2])))) {
+			$selectionNoticeKey = $isSkinSelection ? 'skin_selection_saved' : 'skin_settings_saved';
 			$defindex = (int)$ex[1];
 			$paint = (int)$ex[2];
 			$hasExplicitWear = !$isSkinSelection && array_key_exists('wear', $_POST);
@@ -240,6 +244,7 @@
 			&& (array_key_exists((int)$ex[1], $skins[(int)$ex[0]] ?? [])
 				|| (skinFusionEnabled() && (int)$ex[1] > 0 && isset($paintKits[(int)$ex[1]]))
 				|| (!$isSkinSelection && isSelectedSkinPaint($selectedSkins, (int)$ex[0], (int)$ex[1])))) {
+			$selectionNoticeKey = $isSkinSelection ? 'skin_selection_saved' : 'skin_settings_saved';
 			$defindex = (int)$ex[0];
 			$paint = (int)$ex[1];
 			$isKnifeSkin = in_array($defindex, knifeDefindexes($knifes), true);
@@ -366,6 +371,9 @@
 				$db->rollBack();
 			}
 			throw $exception;
+		}
+		if ($selectionNoticeKey !== '') {
+			queueFloatingNotice($selectionNoticeKey);
 		}
 
 		go("index.php?action=edit&id={$id}&team={$team}");
