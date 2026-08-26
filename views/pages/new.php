@@ -23,7 +23,7 @@
 									</svg>
 								</button>
 							</div>
-							<input id="newPresetSteamId" class="form-control" name="steamid" value="<?= h($_POST['steamid'] ?? '') ?>" inputmode="numeric" pattern="\d{5,18}" minlength="5" maxlength="18" autocomplete="off" required>
+							<input id="newPresetSteamId" class="form-control" name="steamid" value="<?= h($_POST['steamid'] ?? '') ?>" inputmode="numeric" pattern="\d{5,18}" minlength="5" maxlength="18" autocomplete="off" placeholder="<?= h(t('steamid_placeholder')) ?>" required>
 						</div>
 						<label><?= h(t('nickname')) ?>
 							<input class="form-control" name="nickname" value="<?= h($_POST['nickname'] ?? '') ?>" maxlength="100" autocomplete="off" placeholder="<?= h(t('nickname_placeholder')) ?>">

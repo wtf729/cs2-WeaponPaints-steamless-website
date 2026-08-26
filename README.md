@@ -39,7 +39,7 @@ This project is intended for private servers and trusted player groups. It is no
 * Searchable skin, sticker, keychain, music kit, and collectible pin pickers
 * Experimental skin fusion for applying a paint kit to a different weapon or knife
 * Optional website password and per-loadout PIN protection
-* A top-right Connect to Server button that launches Steam directly or copies a password-protected console command
+* A Connect to Server button that launches Steam directly or copies a password-protected console command
 * Administrator mode for unrestricted loadout management, deletion, and visitor-facing site settings
 * English and Simplified Chinese UI
 * Browser-switchable light and dark themes with local preference persistence and fallback images

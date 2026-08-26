@@ -48,7 +48,7 @@
 									</svg>
 								</button>
 							</div>
-							<input id="editPresetSteamId" class="form-control" name="steamid" value="<?= h($currentPreset['steamid']) ?>" inputmode="numeric" pattern="\d{5,18}" minlength="5" maxlength="18" required>
+							<input id="editPresetSteamId" class="form-control" name="steamid" value="<?= h($currentPreset['steamid']) ?>" inputmode="numeric" pattern="\d{5,18}" minlength="5" maxlength="18" placeholder="<?= h(t('steamid_placeholder')) ?>" required>
 						</div>
 						<label><?= h(t('nickname')) ?>
 							<input class="form-control" name="nickname" value="<?= h($currentPreset['nickname'] ?? '') ?>" maxlength="100">

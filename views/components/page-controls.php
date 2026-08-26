@@ -1,9 +1,13 @@
 		<?php if ($accessGranted) : ?>
 			<?php if (serverConnectUri() !== '') : ?>
 				<?php if (serverPassword() !== '') : ?>
-					<button class="server-connect-button" type="button" data-server-command="<?= h(serverConsoleCommand()) ?>" aria-haspopup="dialog" aria-label="<?= h(t('join_server')) ?>" title="<?= h(t('join_server')) ?>"><?= h(t('join_server')) ?></button>
+					<button class="server-connect-button" type="button" data-server-command="<?= h(serverConsoleCommand()) ?>" aria-haspopup="dialog" aria-label="<?= h(t('join_server')) ?>" title="<?= h(t('join_server')) ?>">
+						<img src="assets/icons/cs2.png?v=<?= filemtime(__DIR__ . '/../../assets/icons/cs2.png') ?>" alt="" aria-hidden="true">
+					</button>
 				<?php else : ?>
-					<a class="server-connect-button" href="<?= h(serverConnectUri()) ?>" aria-label="<?= h(t('join_server')) ?>" title="<?= h(t('join_server')) ?>"><?= h(t('join_server')) ?></a>
+					<a class="server-connect-button" href="<?= h(serverConnectUri()) ?>" aria-label="<?= h(t('join_server')) ?>" title="<?= h(t('join_server')) ?>">
+						<img src="assets/icons/cs2.png?v=<?= filemtime(__DIR__ . '/../../assets/icons/cs2.png') ?>" alt="" aria-hidden="true">
+					</a>
 				<?php endif; ?>
 			<?php endif; ?>
 			<button class="admin-button<?= isAdmin() ? ' active' : '' ?>" type="button" data-bs-toggle="modal" data-bs-target="#adminModal" aria-label="<?= h(isAdmin() ? t('admin_enabled') : t('admin')) ?>" title="<?= h(isAdmin() ? t('admin_enabled') : t('admin')) ?>">
